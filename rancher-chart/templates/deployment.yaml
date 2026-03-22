@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rancher.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rancher.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "rancher.selectorLabels" . | nindent 6 }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "rancher.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "rancher.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ include "rancher.imageTag" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: https
+              containerPort: 443
+              protocol: TCP
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          args:
+            - "--no-cacerts"
+            - "--http-listen-port=80"
+            - "--https-listen-port=443"
+            - "--add-local=auto"
+          env:
+            - name: CATTLE_NAMESPACE
+              value: {{ .Release.Namespace }}
+            - name: CATTLE_PEER_SERVICE
+              value: {{ include "rancher.fullname" . }}
+            {{- if .Values.rancher.bootstrapPassword }}
+            - name: CATTLE_BOOTSTRAP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rancher.fullname" . }}-bootstrap
+                  key: bootstrapPassword
+            {{- end }}
+            {{- if .Values.rancher.features }}
+            - name: CATTLE_FEATURES
+              value: {{ .Values.rancher.features | quote }}
+            {{- end }}
+            {{- with .Values.rancher.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.persistence.enabled }}
+          volumeMounts:
+            - name: rancher-data
+              mountPath: /var/lib/rancher
+          {{- end }}
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: rancher-data
+          persistentVolumeClaim:
+            claimName: {{ include "rancher.fullname" . }}-data
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

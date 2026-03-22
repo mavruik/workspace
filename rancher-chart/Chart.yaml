@@ -1,0 +1,16 @@
+apiVersion: v2
+name: rancher
+description: Rancher - Complete container management platform
+type: application
+version: 1.0.0
+appVersion: "2.8.3"
+keywords:
+  - rancher
+  - kubernetes
+  - management
+home: https://rancher.com
+sources:
+  - https://github.com/rancher/rancher
+maintainers:
+  - name: Rancher Labs
+    email: helm@rancher.com

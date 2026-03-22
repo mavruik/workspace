@@ -1,0 +1,28 @@
+Rancher has been deployed!
+
+1. Get the Rancher URL:
+{{- if .Values.ingress.enabled }}
+  https://{{ (index .Values.ingress.hosts 0).host }}
+{{- else }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "rancher.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8443:443
+  https://localhost:8443
+{{- end }}
+
+2. Bootstrap password:
+{{- if .Values.rancher.bootstrapPassword }}
+  You set a custom bootstrap password. Use it on first login.
+{{- else }}
+  Retrieve the auto-generated bootstrap password:
+  kubectl get secret --namespace {{ .Release.Namespace }} bootstrap-secret \
+    -o go-template='{{ "{{" }} .data.bootstrapPassword | base64decode {{ "}}" }}'
+{{- end }}
+
+3. Complete setup at the URL above. cert-manager is{{ if not .Values.certManager.enabled }} NOT{{ end }} installed.
+
+NOTE: Rancher requires cert-manager for TLS certificate management.
+Install cert-manager if not already present:
+  helm repo add jetstack https://charts.jetstack.io
+  helm install cert-manager jetstack/cert-manager \
+    --namespace cert-manager --create-namespace \
+    --set installCRDs=true

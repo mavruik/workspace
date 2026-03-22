@@ -1,0 +1,106 @@
+# Default values for rancher
+
+replicaCount: 3
+
+image:
+  repository: rancher/rancher
+  pullPolicy: IfNotPresent
+  tag: ""  # Defaults to appVersion if empty
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 443
+  httpsPort: 443
+  httpPort: 80
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: rancher.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: rancher-tls
+      hosts:
+        - rancher.example.com
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1024Mi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 3
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - rancher
+          topologyKey: kubernetes.io/hostname
+
+# Rancher-specific settings
+rancher:
+  # FQDN of the Rancher server — required
+  hostname: rancher.example.com
+  # TLS source: rancher | letsEncrypt | secret
+  tls: ingress
+  # Bootstrap admin password (auto-generated if empty)
+  bootstrapPassword: ""
+  # Rancher features flags (comma-separated)
+  features: ""
+  # Additional environment variables
+  extraEnv: []
+  # - name: CATTLE_FEATURES
+  #   value: "fleet=true"
+
+# cert-manager integration
+certManager:
+  # Set to true if cert-manager is already installed in the cluster
+  enabled: true
+  version: "v1.14.4"
+
+# Persistence (for audit logs etc.)
+persistence:
+  enabled: false
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Gi
