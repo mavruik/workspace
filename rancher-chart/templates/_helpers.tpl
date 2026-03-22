@@ -65,3 +65,10 @@ Rancher image tag — uses appVersion as fallback.
 {{- define "rancher.imageTag" -}}
 {{- .Values.image.tag | default .Chart.AppVersion }}
 {{- end }}
+
+{{/*
+Full image reference including private registry.
+*/}}
+{{- define "rancher.image" -}}
+{{- printf "%s/%s:%s" .Values.image.registry .Values.image.repository (include "rancher.imageTag" .) }}
+{{- end }}

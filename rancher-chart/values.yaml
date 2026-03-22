@@ -3,11 +3,22 @@
 replicaCount: 3
 
 image:
+  registry: sres.web.boeing.com:5000
   repository: rancher/rancher
   pullPolicy: IfNotPresent
   tag: ""  # Defaults to appVersion if empty
 
-imagePullSecrets: []
+imagePullSecrets:
+  - name: boeing-registry-secret
+
+# Private registry credentials
+imageCredentials:
+  create: true
+  name: boeing-registry-secret
+  registry: sres.web.boeing.com:5000
+  username: ""
+  password: ""
+  email: ""
 
 nameOverride: ""
 fullnameOverride: ""
